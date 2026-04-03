@@ -1,0 +1,25 @@
+from fastapi import APIRouter, status
+
+from app.core.database import SessionDep
+from app.features.auth.dependencies import CurrentUser
+from app.features.auth.schemas import LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from app.features.auth.service import authenticate_user, register_user
+
+router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def register(body: RegisterRequest, db: SessionDep):
+    user = await register_user(db, body.email, body.password, body.full_name)
+    return user
+
+
+@router.post("/login", response_model=TokenResponse)
+async def login(body: LoginRequest, db: SessionDep):
+    token = await authenticate_user(db, body.email, body.password)
+    return TokenResponse(access_token=token)
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_me(current_user: CurrentUser):
+    return current_user

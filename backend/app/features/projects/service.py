@@ -1,0 +1,69 @@
+import uuid
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.exceptions import ForbiddenError, NotFoundError
+from app.features.auth.models import User
+from app.features.projects.models import Project
+from app.features.projects.schemas import ProjectResponse
+from app.features.tasks.models import Task
+
+
+async def create_project(db: AsyncSession, name: str, description: str | None, owner: User) -> ProjectResponse:
+    project = Project(name=name, description=description, owner_id=owner.id)
+    db.add(project)
+    await db.commit()
+    await db.refresh(project)
+    return ProjectResponse(
+        id=project.id, name=project.name, description=project.description,
+        owner_id=project.owner_id, created_at=project.created_at, task_count=0,
+    )
+
+
+async def list_projects(db: AsyncSession, skip: int, limit: int) -> list[ProjectResponse]:
+    query = (
+        select(Project, func.count(Task.id).label("task_count"))
+        .outerjoin(Task, Task.project_id == Project.id)
+        .group_by(Project.id)
+        .order_by(Project.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    return [
+        ProjectResponse(
+            id=p.id, name=p.name, description=p.description,
+            owner_id=p.owner_id, created_at=p.created_at, task_count=tc,
+        )
+        for p, tc in result.all()
+    ]
+
+
+async def get_project(db: AsyncSession, project_id: uuid.UUID) -> ProjectResponse:
+    query = (
+        select(Project, func.count(Task.id).label("task_count"))
+        .outerjoin(Task, Task.project_id == Project.id)
+        .where(Project.id == project_id)
+        .group_by(Project.id)
+    )
+    result = await db.execute(query)
+    row = result.one_or_none()
+    if not row:
+        raise NotFoundError("Project not found")
+    p, tc = row
+    return ProjectResponse(
+        id=p.id, name=p.name, description=p.description,
+        owner_id=p.owner_id, created_at=p.created_at, task_count=tc,
+    )
+
+
+async def delete_project(db: AsyncSession, project_id: uuid.UUID, current_user: User) -> None:
+    result = await db.execute(select(Project).where(Project.id == project_id))
+    project = result.scalar_one_or_none()
+    if not project:
+        raise NotFoundError("Project not found")
+    if project.owner_id != current_user.id:
+        raise ForbiddenError("Not the project owner")
+    await db.delete(project)
+    await db.commit()
