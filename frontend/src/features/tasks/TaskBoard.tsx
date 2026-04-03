@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+// Badge import kept for task type label
 import { useQueryClient } from "@tanstack/react-query"
 import { FileUpload } from "./FileUpload"
 import { useTasks, useCreateTask, useDeleteTask, useUpdateTask } from "./hooks"
@@ -167,13 +168,10 @@ export function TaskBoard({ project }: TaskBoardProps) {
                     updateMutation.mutate({ taskId: task.id, status })
                   }
                 >
-                  <SelectTrigger className="w-35 shrink-0">
-                    <Badge
-                      variant="outline"
-                      className={STATUS_STYLES[task.status]}
-                    >
-                      {task.status.replace("_", " ")}
-                    </Badge>
+                  <SelectTrigger
+                    className={`w-35 shrink-0 border ${STATUS_STYLES[task.status]}`}
+                  >
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="open">Open</SelectItem>
