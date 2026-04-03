@@ -28,6 +28,11 @@ A scalable AI data annotation and processing platform built with **FastAPI**, **
                   │   Celery   │  Background workers
                   │   Worker   │  Image/audio/text processing
                   └────────────┘
+                         │
+                  ┌──────┴───────┐
+                  │  Groq AI     │  LLM analysis
+                  │  (Llama 3.1) │  Sentiment + quality scoring
+                  └──────────────┘
 ```
 
 ## Tech Stack
@@ -39,8 +44,9 @@ A scalable AI data annotation and processing platform built with **FastAPI**, **
 | Database | PostgreSQL 16 (B-tree indexes, JSONB, query optimization) |
 | Queue | Celery + Redis (background workers, retry logic) |
 | Storage | MinIO (S3-compatible, presigned URLs, boto3) |
+| AI | Groq (Llama 3.1 8B) — sentiment analysis, quality scoring, tagging |
 | Infra | Docker Compose, Makefile |
-| Testing | Pytest (20 tests), pytest-asyncio |
+| Testing | Pytest (24 backend) + Vitest (11 frontend) |
 
 ## Features
 
@@ -50,6 +56,7 @@ A scalable AI data annotation and processing platform built with **FastAPI**, **
 - **Async Processing Pipeline** via Celery workers (image thumbnails, audio metadata, text analysis)
 - **Pipeline Monitor** with real-time status polling and processing breakdown
 - **File Preview Modal** for images, audio playback, and text content
+- **AI-Powered Analysis** via Groq (Llama 3.1) — sentiment badges, quality scores, tags, recommendations
 - **Custom Exception Handling** with structured error codes
 
 ## Project Structure
@@ -106,8 +113,9 @@ frontend/src/features/pipeline/   ↔  backend/app/features/pipeline/
 git clone https://github.com/sumoncse19/annotate-flow.git
 cd annotate-flow
 
-# Copy environment
+# Copy environment and add your Groq API key
 cp .env.example .env
+# Edit .env and set GROQ_API_KEY (free at https://console.groq.com)
 
 # Install dependencies
 make install
@@ -143,7 +151,7 @@ This starts all 6 services: PostgreSQL, Redis, MinIO, FastAPI API, Celery Worker
 make test
 ```
 
-31 tests: 20 backend (Pytest) + 11 frontend (Vitest).
+35 tests: 24 backend (Pytest) + 11 frontend (Vitest).
 
 ## API Endpoints
 
@@ -164,6 +172,7 @@ make test
 | POST | `/api/tasks/:id/submissions/:id/confirm` | Confirm upload, trigger processing |
 | GET | `/api/tasks/:id/submissions/` | List submissions |
 | GET | `/api/tasks/:id/submissions/:id/download-url` | Get presigned download URL |
+| POST | `/api/tasks/:id/submissions/:id/analyze` | AI analysis (Groq) with caching |
 | GET | `/api/pipeline/status` | Processing status counts |
 | GET | `/api/pipeline/recent` | Recent processing jobs |
 | GET | `/api/pipeline/analytics` | Platform analytics & contributor stats |

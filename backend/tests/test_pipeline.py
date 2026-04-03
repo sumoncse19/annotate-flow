@@ -21,6 +21,17 @@ async def test_pipeline_recent(auth_client: tuple[AsyncClient, str]):
 
 
 @pytest.mark.asyncio
+async def test_pipeline_analytics(auth_client: tuple[AsyncClient, str]):
+    client, _ = auth_client
+    resp = await client.get("/api/pipeline/analytics")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "overview" in data
+    assert "top_contributors" in data
+    assert "projects" in data
+
+
+@pytest.mark.asyncio
 async def test_health_check(client: AsyncClient):
     resp = await client.get("/api/health")
     assert resp.status_code == 200
