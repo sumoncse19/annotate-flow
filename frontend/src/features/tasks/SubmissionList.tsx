@@ -16,18 +16,58 @@ interface SubmissionListProps {
   taskId: string
 }
 
+interface AiAnalysis {
+  summary: string
+  sentiment: "positive" | "negative" | "mixed" | "neutral"
+  tags: string[]
+  quality_score: number
+  recommendations: string
+  provider: string
+}
+
+const SENTIMENT_STYLES: Record<string, { bg: string; text: string }> = {
+  positive: { bg: "bg-green-500/10", text: "text-green-500" },
+  negative: { bg: "bg-red-500/10", text: "text-red-500" },
+  mixed: { bg: "bg-yellow-500/10", text: "text-yellow-500" },
+  neutral: { bg: "bg-blue-500/10", text: "text-blue-500" },
+}
+
 export function SubmissionList({ taskId }: SubmissionListProps) {
   const { data: submissions = [], isLoading } = useSubmissions(taskId)
   const [preview, setPreview] = useState<{
     url: string
     submission: Submission
   } | null>(null)
+  const [analysis, setAnalysis] = useState<AiAnalysis | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
 
   async function handlePreview(sub: Submission) {
     const { data } = await api.get(
       `/tasks/${taskId}/submissions/${sub.id}/download-url`
     )
     setPreview({ url: data.download_url, submission: sub })
+    // Load cached analysis if exists
+    const result = sub.processing_result as Record<string, unknown> | null
+    if (result?.ai_analysis) {
+      setAnalysis(result.ai_analysis as AiAnalysis)
+    } else {
+      setAnalysis(null)
+    }
+  }
+
+  async function handleAnalyze() {
+    if (!preview) return
+    setAnalyzing(true)
+    try {
+      const { data } = await api.post(
+        `/tasks/${taskId}/submissions/${preview.submission.id}/analyze`
+      )
+      setAnalysis(data)
+    } catch {
+      setAnalysis(null)
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   function handleDownload() {
@@ -233,6 +273,64 @@ export function SubmissionList({ taskId }: SubmissionListProps) {
                     </div>
                   )
                 })()}
+
+              {/* AI Analysis */}
+              {analysis ? (
+                <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] font-medium tracking-wider text-primary uppercase">
+                      AI Analysis
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={`font-mono text-[10px] uppercase ${SENTIMENT_STYLES[analysis.sentiment]?.text || ""} ${SENTIMENT_STYLES[analysis.sentiment]?.bg || ""}`}
+                    >
+                      {analysis.sentiment}
+                    </Badge>
+                    <Badge
+                      variant="secondary"
+                      className="font-mono text-[10px]"
+                    >
+                      Quality: {analysis.quality_score}/10
+                    </Badge>
+                    <span className="font-mono text-[10px] text-muted-foreground">
+                      via {analysis.provider}
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed">{analysis.summary}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {analysis.tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="font-mono text-[10px]"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {analysis.recommendations}
+                  </p>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAnalyze}
+                  disabled={analyzing}
+                  className="border-primary/30 text-primary hover:bg-primary/10"
+                >
+                  {analyzing ? (
+                    <>
+                      <span className="mr-2 inline-block h-3 w-3 animate-spin rounded-full border border-primary/30 border-t-primary" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    "Analyze with AI"
+                  )}
+                </Button>
+              )}
 
               {/* Actions */}
               <div className="flex justify-end gap-2">

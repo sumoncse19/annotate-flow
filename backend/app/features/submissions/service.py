@@ -153,3 +153,28 @@ async def get_submission(db: AsyncSession, task_id: uuid.UUID, submission_id: uu
 async def get_download_url(db: AsyncSession, task_id: uuid.UUID, submission_id: uuid.UUID) -> str:
     submission = await get_submission(db, task_id, submission_id)
     return generate_presigned_download_url(submission.file_key)
+
+
+async def analyze_submission(db: AsyncSession, task_id: uuid.UUID, submission_id: uuid.UUID) -> dict:
+    from app.features.submissions.ai_service import analyze_submission as ai_analyze
+
+    submission = await get_submission(db, task_id, submission_id)
+    if submission.processing_status != ProcessingStatus.COMPLETED:
+        raise NotFoundError("Submission must be processed before analysis")
+
+    result = submission.processing_result or {}
+
+    # Check if already analyzed
+    if result.get("ai_analysis"):
+        return result["ai_analysis"]
+
+    analysis = ai_analyze(result, submission.file_name, submission.content_type or "")
+
+    # Store analysis in processing_result
+    result["ai_analysis"] = analysis
+    submission.processing_result = result
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(submission, "processing_result")
+    await db.commit()
+
+    return analysis

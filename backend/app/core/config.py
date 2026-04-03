@@ -15,12 +15,15 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = "minioadmin123"
     MINIO_USE_SSL: bool = False
 
+    # AI (Groq)
+    GROQ_API_KEY: str = ""
+
     # JWT
     JWT_SECRET_KEY: str = "your-super-secret-key-change-in-production"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    model_config = {"env_file": ".env", "extra": "ignore"}
+    model_config = {"env_file": ["../.env", ".env"], "extra": "ignore"}
 
 
 settings = Settings()

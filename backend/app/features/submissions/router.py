@@ -45,3 +45,8 @@ async def get_submission(task_id: uuid.UUID, submission_id: uuid.UUID, current_u
 async def get_download_url(task_id: uuid.UUID, submission_id: uuid.UUID, current_user: CurrentUser, db: SessionDep):
     url = await service.get_download_url(db, task_id, submission_id)
     return {"download_url": url}
+
+
+@router.post("/{submission_id}/analyze")
+async def analyze_submission(task_id: uuid.UUID, submission_id: uuid.UUID, current_user: CurrentUser, db: SessionDep):
+    return await service.analyze_submission(db, task_id, submission_id)
