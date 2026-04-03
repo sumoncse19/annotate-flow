@@ -5,8 +5,7 @@ import type { Task } from "./types"
 export function useTasks(projectId: string) {
   return useQuery<Task[]>({
     queryKey: ["tasks", projectId],
-    queryFn: () =>
-      api.get(`/projects/${projectId}/tasks/`).then((r) => r.data),
+    queryFn: () => api.get(`/projects/${projectId}/tasks/`).then((r) => r.data),
   })
 }
 
@@ -19,6 +18,38 @@ export function useCreateTask(projectId: string) {
       description: string
       task_type: string
     }) => api.post(`/projects/${projectId}/tasks/`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
+    },
+  })
+}
+
+export function useDeleteTask(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (taskId: string) =>
+      api.delete(`/projects/${projectId}/tasks/${taskId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
+    },
+  })
+}
+
+export function useUpdateTask(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      ...data
+    }: {
+      taskId: string
+      title?: string
+      description?: string
+      status?: string
+      priority?: number
+    }) => api.patch(`/projects/${projectId}/tasks/${taskId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
     },

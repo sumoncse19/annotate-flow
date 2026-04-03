@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { TaskBoard } from "@/features/tasks/TaskBoard"
-import { useProjects, useCreateProject } from "./hooks"
+import { useProjects, useCreateProject, useDeleteProject } from "./hooks"
 import type { Project } from "./types"
 
 export function ProjectList() {
@@ -21,6 +21,7 @@ export function ProjectList() {
 
   const { data: projects = [], isLoading } = useProjects()
   const createMutation = useCreateProject()
+  const deleteMutation = useDeleteProject()
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -32,7 +33,7 @@ export function ProjectList() {
           setName("")
           setDescription("")
         },
-      },
+      }
     )
   }
 
@@ -105,11 +106,11 @@ export function ProjectList() {
       )}
 
       {isLoading ? (
-        <p className="text-muted-foreground py-12 text-center">Loading...</p>
+        <p className="py-12 text-center text-muted-foreground">Loading...</p>
       ) : projects.length === 0 ? (
         <div className="py-12 text-center">
           <p className="text-muted-foreground">No projects yet</p>
-          <p className="text-muted-foreground/60 mt-1 text-sm">
+          <p className="mt-1 text-sm text-muted-foreground/60">
             Create one to start annotating data
           </p>
         </div>
@@ -122,7 +123,22 @@ export function ProjectList() {
               onClick={() => setSelectedProject(project)}
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">{project.name}</CardTitle>
+                <div className="flex items-start justify-between">
+                  <CardTitle className="text-base">{project.name}</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (confirm(`Delete "${project.name}"?`)) {
+                        deleteMutation.mutate(project.id)
+                      }
+                    }}
+                  >
+                    &times;
+                  </Button>
+                </div>
                 {project.description && (
                   <CardDescription className="line-clamp-2">
                     {project.description}
@@ -130,7 +146,7 @@ export function ProjectList() {
                 )}
               </CardHeader>
               <CardContent>
-                <div className="text-muted-foreground flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <span>{project.task_count} tasks</span>
                   <span>
                     {new Date(project.created_at).toLocaleDateString()}

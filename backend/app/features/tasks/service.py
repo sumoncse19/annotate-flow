@@ -82,3 +82,14 @@ async def update_task(
         project_id=task.project_id, created_at=task.created_at,
         submission_count=count_result.scalar() or 0,
     )
+
+
+async def delete_task(db: AsyncSession, project_id: uuid.UUID, task_id: uuid.UUID) -> None:
+    result = await db.execute(
+        select(Task).where(Task.id == task_id, Task.project_id == project_id)
+    )
+    task = result.scalar_one_or_none()
+    if not task:
+        raise NotFoundError("Task not found")
+    await db.delete(task)
+    await db.commit()

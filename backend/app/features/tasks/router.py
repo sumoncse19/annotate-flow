@@ -36,3 +36,8 @@ async def update_task(
     current_user: CurrentUser, db: SessionDep,
 ):
     return await service.update_task(db, project_id, task_id, body)
+
+
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_task(project_id: uuid.UUID, task_id: uuid.UUID, current_user: CurrentUser, db: SessionDep):
+    await service.delete_task(db, project_id, task_id)
