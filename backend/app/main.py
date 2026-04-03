@@ -10,6 +10,7 @@ from app.features.pipeline.router import router as pipeline_router
 from app.features.projects.router import router as projects_router
 from app.features.submissions.router import router as submissions_router
 from app.features.tasks.router import router as tasks_router
+import app.shared.models  # noqa: F401 — register all ORM models at startup
 from app.shared.storage import ensure_bucket
 
 logger = logging.getLogger(__name__)
