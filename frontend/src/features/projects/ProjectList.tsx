@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog"
 import { TaskBoard } from "@/features/tasks/TaskBoard"
 import { useProjects, useCreateProject, useDeleteProject } from "./hooks"
 import type { Project } from "./types"
@@ -125,19 +126,12 @@ export function ProjectList() {
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-base">{project.name}</CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="shrink-0 text-muted-foreground hover:text-destructive"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (confirm(`Delete "${project.name}"?`)) {
-                        deleteMutation.mutate(project.id)
-                      }
-                    }}
-                  >
-                    &times;
-                  </Button>
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <ConfirmDeleteDialog
+                      name={project.name}
+                      onConfirm={() => deleteMutation.mutate(project.id)}
+                    />
+                  </span>
                 </div>
                 {project.description && (
                   <CardDescription className="line-clamp-2">

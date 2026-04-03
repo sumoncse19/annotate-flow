@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-// Badge import kept for task type label
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog"
 import { useQueryClient } from "@tanstack/react-query"
 import { FileUpload } from "./FileUpload"
 import { useTasks, useCreateTask, useDeleteTask, useUpdateTask } from "./hooks"
@@ -191,18 +191,10 @@ export function TaskBoard({ project }: TaskBoardProps) {
                   Upload
                 </Button>
 
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => {
-                    if (confirm(`Delete "${task.title}"?`)) {
-                      deleteMutation.mutate(task.id)
-                    }
-                  }}
-                >
-                  &times;
-                </Button>
+                <ConfirmDeleteDialog
+                  name={task.title}
+                  onConfirm={() => deleteMutation.mutate(task.id)}
+                />
               </CardContent>
             </Card>
           ))}
