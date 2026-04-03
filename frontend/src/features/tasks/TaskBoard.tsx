@@ -11,10 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog"
 import { useQueryClient } from "@tanstack/react-query"
 import { FileUpload } from "./FileUpload"
-import { useTasks, useCreateTask, useDeleteTask, useUpdateTask } from "./hooks"
+import { SubmissionList } from "./SubmissionList"
+import {
+  useTasks,
+  useCreateTask,
+  useDeleteTask,
+  useUpdateTask,
+} from "./hooks"
 import { STATUS_STYLES, TYPE_LABELS } from "./types"
 import type { Project } from "@/features/projects/types"
 
@@ -25,10 +32,8 @@ interface TaskBoardProps {
 export function TaskBoard({ project }: TaskBoardProps) {
   const queryClient = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
-  const [uploadTask, setUploadTask] = useState<{
-    id: string
-    type: string
-  } | null>(null)
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
+  const [uploadTaskId, setUploadTaskId] = useState<string | null>(null)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [taskType, setTaskType] = useState("image")
@@ -48,8 +53,13 @@ export function TaskBoard({ project }: TaskBoardProps) {
           setTitle("")
           setDescription("")
         },
-      }
+      },
     )
+  }
+
+  function toggleExpand(taskId: string) {
+    setExpandedTaskId((prev) => (prev === taskId ? null : taskId))
+    setUploadTaskId(null)
   }
 
   return (
@@ -98,7 +108,7 @@ export function TaskBoard({ project }: TaskBoardProps) {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper">
                     <SelectItem value="image">Image</SelectItem>
                     <SelectItem value="audio">Audio</SelectItem>
                     <SelectItem value="text">Text</SelectItem>
@@ -125,21 +135,6 @@ export function TaskBoard({ project }: TaskBoardProps) {
             </form>
           </CardContent>
         </Card>
-      )}
-
-      {/* File Upload */}
-      {uploadTask && (
-        <FileUpload
-          taskId={uploadTask.id}
-          taskType={uploadTask.type}
-          onClose={() => setUploadTask(null)}
-          onUploaded={() => {
-            queryClient.invalidateQueries({
-              queryKey: ["tasks", project.id],
-            })
-            setUploadTask(null)
-          }}
-        />
       )}
 
       {/* Task List */}
@@ -171,73 +166,119 @@ export function TaskBoard({ project }: TaskBoardProps) {
         </div>
       ) : (
         <div className="stagger-children space-y-3">
-          {tasks.map((task) => (
-            <Card
-              key={task.id}
-              className="transition-colors hover:border-border/80"
-            >
-              <CardContent className="flex items-center gap-4 py-4">
-                {/* Left: Task info */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2.5">
-                    <h3 className="truncate font-medium">{task.title}</h3>
-                    <Badge
-                      variant="secondary"
-                      className="font-mono text-[10px] tracking-wider uppercase"
-                    >
-                      {TYPE_LABELS[task.task_type] || task.task_type}
-                    </Badge>
-                  </div>
-                  {task.description && (
-                    <p className="mt-1 truncate text-sm text-muted-foreground">
-                      {task.description}
-                    </p>
-                  )}
-                  <p className="mt-1.5 font-mono text-xs text-muted-foreground/60">
-                    {task.submission_count} submission
-                    {task.submission_count !== 1 ? "s" : ""}
-                  </p>
-                </div>
-
-                {/* Status select */}
-                <Select
-                  value={task.status}
-                  onValueChange={(status) =>
-                    updateMutation.mutate({ taskId: task.id, status })
-                  }
-                >
-                  <SelectTrigger
-                    className={`w-35 shrink-0 border font-mono text-xs ${STATUS_STYLES[task.status]}`}
+          {tasks.map((task) => {
+            const isExpanded = expandedTaskId === task.id
+            const isUploading = uploadTaskId === task.id
+            return (
+              <Card
+                key={task.id}
+                className={`transition-colors ${isExpanded ? "border-primary/20" : ""}`}
+              >
+                {/* Task header row */}
+                <CardContent className="flex items-center gap-4 py-4">
+                  <div
+                    className="min-w-0 flex-1 cursor-pointer"
+                    onClick={() => toggleExpand(task.id)}
                   >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="open">Open</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={`text-xs text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                      >
+                        &#9656;
+                      </span>
+                      <h3 className="truncate font-medium">{task.title}</h3>
+                      <Badge
+                        variant="secondary"
+                        className="font-mono text-[10px] uppercase tracking-wider"
+                      >
+                        {TYPE_LABELS[task.task_type] || task.task_type}
+                      </Badge>
+                    </div>
+                    {task.description && (
+                      <p className="mt-1 truncate pl-5 text-sm text-muted-foreground">
+                        {task.description}
+                      </p>
+                    )}
+                    <p className="mt-1.5 pl-5 font-mono text-xs text-muted-foreground/60">
+                      {task.submission_count} submission
+                      {task.submission_count !== 1 ? "s" : ""}
+                    </p>
+                  </div>
 
-                {/* Upload */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() =>
-                    setUploadTask({ id: task.id, type: task.task_type })
-                  }
-                >
-                  Upload
-                </Button>
+                  {/* Status select */}
+                  <Select
+                    value={task.status}
+                    onValueChange={(status) =>
+                      updateMutation.mutate({ taskId: task.id, status })
+                    }
+                  >
+                    <SelectTrigger
+                      className={`w-[140px] shrink-0 border font-mono text-xs ${STATUS_STYLES[task.status]}`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent position="popper" sideOffset={4}>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-                {/* Delete */}
-                <ConfirmDeleteDialog
-                  name={task.title}
-                  onConfirm={() => deleteMutation.mutate(task.id)}
-                />
-              </CardContent>
-            </Card>
-          ))}
+                  {/* Upload */}
+                  <Button
+                    variant={isUploading ? "default" : "outline"}
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() =>
+                      setUploadTaskId(isUploading ? null : task.id)
+                    }
+                  >
+                    Upload
+                  </Button>
+
+                  {/* Delete */}
+                  <ConfirmDeleteDialog
+                    name={task.title}
+                    onConfirm={() => deleteMutation.mutate(task.id)}
+                  />
+                </CardContent>
+
+                {/* Expanded section: Upload + Submissions */}
+                {(isUploading || isExpanded) && (
+                  <div className="animate-fade-up border-t border-border/50 px-6 pb-5">
+                    {/* Inline upload */}
+                    {isUploading && (
+                      <div className="pt-4">
+                        <FileUpload
+                          taskId={task.id}
+                          taskType={task.task_type}
+                          onClose={() => setUploadTaskId(null)}
+                          onUploaded={() => {
+                            queryClient.invalidateQueries({
+                              queryKey: ["tasks", project.id],
+                            })
+                            queryClient.invalidateQueries({
+                              queryKey: ["submissions", task.id],
+                            })
+                            setUploadTaskId(null)
+                            setExpandedTaskId(task.id)
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Submissions list */}
+                    {isExpanded && (
+                      <div className={isUploading ? "" : "pt-4"}>
+                        {isUploading && <Separator className="my-4" />}
+                        <SubmissionList taskId={task.id} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
+            )
+          })}
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import api from "@/shared/api"
-import type { Task } from "./types"
+import type { Task, Submission } from "./types"
 
 export function useTasks(projectId: string) {
   return useQuery<Task[]>({
@@ -33,6 +33,15 @@ export function useDeleteTask(projectId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
     },
+  })
+}
+
+export function useSubmissions(taskId: string | null) {
+  return useQuery<Submission[]>({
+    queryKey: ["submissions", taskId],
+    queryFn: () => api.get(`/tasks/${taskId}/submissions/`).then((r) => r.data),
+    enabled: !!taskId,
+    refetchInterval: 5000,
   })
 }
 
