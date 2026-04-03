@@ -1,13 +1,49 @@
+import re
 import uuid
+from pathlib import PurePosixPath
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
 from app.features.auth.models import User
+from app.features.projects.models import Project
 from app.features.submissions.models import ProcessingStatus, Submission
 from app.features.tasks.models import Task
 from app.shared.storage import generate_presigned_download_url, generate_presigned_upload_url
+
+
+def _sanitize_name(name: str) -> str:
+    """Replace spaces with underscores and strip non-safe characters."""
+    name = name.strip().replace(" ", "_")
+    name = re.sub(r"[^\w.\-]", "", name)
+    return name or "file"
+
+
+def _slugify_project_name(name: str) -> str:
+    """Convert project name to a URL-safe slug."""
+    slug = name.strip().lower().replace(" ", "_")
+    slug = re.sub(r"[^\w\-]", "", slug)
+    return slug or "project"
+
+
+async def _resolve_unique_file_key(
+    db: AsyncSession, base_dir: str, sanitized_name: str,
+) -> str:
+    """If a file with the same name already exists in this folder, append _01, _02, etc."""
+    stem = PurePosixPath(sanitized_name).stem
+    suffix = PurePosixPath(sanitized_name).suffix
+
+    # Check how many submissions already use this base name in the same directory
+    pattern = f"{base_dir}/{stem}%"
+    result = await db.execute(
+        select(func.count(Submission.id)).where(Submission.file_key.like(pattern))
+    )
+    count = result.scalar() or 0
+
+    if count == 0:
+        return f"{base_dir}/{sanitized_name}"
+    return f"{base_dir}/{stem}_{count:02d}{suffix}"
 
 
 async def create_submission(
@@ -15,11 +51,26 @@ async def create_submission(
     file_name: str, file_size: int | None, content_type: str | None,
 ) -> tuple[Submission, str]:
     """Create a submission record and return it with a presigned upload URL."""
-    result = await db.execute(select(Task).where(Task.id == task_id))
-    if not result.scalar_one_or_none():
+    # Look up task + project in one query
+    result = await db.execute(
+        select(Task, Project)
+        .join(Project, Project.id == Task.project_id)
+        .where(Task.id == task_id)
+    )
+    row = result.one_or_none()
+    if not row:
         raise NotFoundError("Task not found")
+    task, project = row
 
-    file_key = f"submissions/{task_id}/{uuid.uuid4()}/{file_name}"
+    # Build path: submissions/{project_slug}_{unique_id}/{task_type}/{file_name}
+    project_slug = _slugify_project_name(project.name)
+    project_folder = f"{project_slug}_{str(project.id)[:8]}"
+    task_type_folder = task.task_type.value  # image, audio, or text
+    sanitized_name = _sanitize_name(file_name)
+
+    base_dir = f"submissions/{project_folder}/{task_type_folder}"
+    file_key = await _resolve_unique_file_key(db, base_dir, sanitized_name)
+
     submission = Submission(
         task_id=task_id, contributor_id=contributor.id, file_key=file_key,
         file_name=file_name, file_size=file_size, content_type=content_type,
