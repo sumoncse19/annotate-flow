@@ -54,26 +54,33 @@ export function TaskBoard({ project }: TaskBoardProps) {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      {/* Header */}
+      <div className="mb-8 flex items-end justify-between">
         <div>
-          <h2 className="text-xl font-semibold">{project.name}</h2>
-          <p className="text-sm text-muted-foreground">{tasks.length} tasks</p>
+          <h2 className="font-heading text-3xl font-semibold tracking-tight">
+            {project.name}
+          </h2>
+          <p className="mt-1 font-mono text-sm text-muted-foreground">
+            {tasks.length} task{tasks.length !== 1 ? "s" : ""} in project
+          </p>
         </div>
         <Button onClick={() => setShowCreate(!showCreate)}>New Task</Button>
       </div>
 
+      {/* Create form */}
       {showCreate && (
-        <Card className="mb-6">
+        <Card className="animate-fade-up mb-8 border-primary/20 shadow-lg shadow-primary/5">
           <CardContent className="pt-6">
-            <form onSubmit={handleCreate} className="space-y-3">
+            <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="taskTitle">Task Title</Label>
                 <Input
                   id="taskTitle"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Annotate product images"
+                  placeholder="e.g. Label product images for classification"
                   required
+                  autoFocus
                 />
               </div>
               <div className="space-y-2">
@@ -82,11 +89,11 @@ export function TaskBoard({ project }: TaskBoardProps) {
                   id="taskDesc"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional description"
+                  placeholder="What should contributors annotate?"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Task Type</Label>
+                <Label>Data Type</Label>
                 <Select value={taskType} onValueChange={setTaskType}>
                   <SelectTrigger>
                     <SelectValue />
@@ -120,6 +127,7 @@ export function TaskBoard({ project }: TaskBoardProps) {
         </Card>
       )}
 
+      {/* File Upload */}
       {uploadTask && (
         <FileUpload
           taskId={uploadTask.id}
@@ -134,21 +142,49 @@ export function TaskBoard({ project }: TaskBoardProps) {
         />
       )}
 
+      {/* Task List */}
       {isLoading ? (
-        <p className="py-12 text-center text-muted-foreground">Loading...</p>
+        <div className="flex items-center justify-center py-20">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+        </div>
       ) : tasks.length === 0 ? (
-        <div className="py-12 text-center">
-          <p className="text-muted-foreground">No tasks yet</p>
+        <div className="py-20 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-7 w-7 text-muted-foreground"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <p className="text-lg font-medium">No tasks yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Create a task to start collecting data
+          </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="stagger-children space-y-3">
           {tasks.map((task) => (
-            <Card key={task.id}>
-              <CardContent className="flex items-center justify-between gap-3 py-4">
+            <Card
+              key={task.id}
+              className="transition-colors hover:border-border/80"
+            >
+              <CardContent className="flex items-center gap-4 py-4">
+                {/* Left: Task info */}
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <h3 className="truncate font-medium">{task.title}</h3>
-                    <Badge variant="secondary">
+                    <Badge
+                      variant="secondary"
+                      className="font-mono text-[10px] tracking-wider uppercase"
+                    >
                       {TYPE_LABELS[task.task_type] || task.task_type}
                     </Badge>
                   </div>
@@ -157,11 +193,13 @@ export function TaskBoard({ project }: TaskBoardProps) {
                       {task.description}
                     </p>
                   )}
-                  <p className="mt-1 text-xs text-muted-foreground/60">
-                    {task.submission_count} submissions
+                  <p className="mt-1.5 font-mono text-xs text-muted-foreground/60">
+                    {task.submission_count} submission
+                    {task.submission_count !== 1 ? "s" : ""}
                   </p>
                 </div>
 
+                {/* Status select */}
                 <Select
                   value={task.status}
                   onValueChange={(status) =>
@@ -169,7 +207,7 @@ export function TaskBoard({ project }: TaskBoardProps) {
                   }
                 >
                   <SelectTrigger
-                    className={`w-35 shrink-0 border ${STATUS_STYLES[task.status]}`}
+                    className={`w-35 shrink-0 border font-mono text-xs ${STATUS_STYLES[task.status]}`}
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -180,6 +218,7 @@ export function TaskBoard({ project }: TaskBoardProps) {
                   </SelectContent>
                 </Select>
 
+                {/* Upload */}
                 <Button
                   variant="outline"
                   size="sm"
@@ -191,6 +230,7 @@ export function TaskBoard({ project }: TaskBoardProps) {
                   Upload
                 </Button>
 
+                {/* Delete */}
                 <ConfirmDeleteDialog
                   name={task.title}
                   onConfirm={() => deleteMutation.mutate(task.id)}

@@ -41,14 +41,15 @@ export function ProjectList() {
   if (selectedProject) {
     return (
       <div>
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
           onClick={() => setSelectedProject(null)}
-          className="mb-4"
+          className="group mb-6 flex items-center gap-2 font-mono text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          &larr; Back to Projects
-        </Button>
+          <span className="transition-transform group-hover:-translate-x-0.5">
+            &larr;
+          </span>
+          Back to Projects
+        </button>
         <TaskBoard project={selectedProject} />
       </div>
     )
@@ -56,23 +57,33 @@ export function ProjectList() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Projects</h2>
+      {/* Header */}
+      <div className="mb-8 flex items-end justify-between">
+        <div>
+          <h2 className="font-heading text-3xl font-semibold tracking-tight">
+            Projects
+          </h2>
+          <p className="mt-1 font-mono text-sm text-muted-foreground">
+            {projects.length} project{projects.length !== 1 ? "s" : ""} total
+          </p>
+        </div>
         <Button onClick={() => setShowCreate(!showCreate)}>New Project</Button>
       </div>
 
+      {/* Create form */}
       {showCreate && (
-        <Card className="mb-6">
+        <Card className="animate-fade-up mb-8 border-primary/20 shadow-lg shadow-primary/5">
           <CardContent className="pt-6">
-            <form onSubmit={handleCreate} className="space-y-3">
+            <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="projectName">Project Name</Label>
                 <Input
                   id="projectName"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="My annotation project"
+                  placeholder="e.g. Product Image Annotations"
                   required
+                  autoFocus
                 />
               </div>
               <div className="space-y-2">
@@ -81,7 +92,7 @@ export function ProjectList() {
                   id="projectDesc"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional description"
+                  placeholder="What data will be annotated?"
                 />
               </div>
               <div className="flex gap-2">
@@ -90,7 +101,7 @@ export function ProjectList() {
                   size="sm"
                   disabled={createMutation.isPending}
                 >
-                  {createMutation.isPending ? "Creating..." : "Create"}
+                  {createMutation.isPending ? "Creating..." : "Create Project"}
                 </Button>
                 <Button
                   type="button"
@@ -106,26 +117,53 @@ export function ProjectList() {
         </Card>
       )}
 
+      {/* Project grid */}
       {isLoading ? (
-        <p className="py-12 text-center text-muted-foreground">Loading...</p>
+        <div className="flex items-center justify-center py-20">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+        </div>
       ) : projects.length === 0 ? (
-        <div className="py-12 text-center">
-          <p className="text-muted-foreground">No projects yet</p>
-          <p className="mt-1 text-sm text-muted-foreground/60">
-            Create one to start annotating data
+        <div className="py-20 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-7 w-7 text-muted-foreground"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path
+                d="M2 17L12 22L22 17M2 12L12 17L22 12M12 2L2 7L12 12L22 7L12 2Z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <p className="text-lg font-medium text-foreground">No projects yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Create your first project to begin annotating data
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="stagger-children grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
             <Card
               key={project.id}
-              className="cursor-pointer transition-colors hover:border-primary/30"
+              className="group cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5"
               onClick={() => setSelectedProject(project)}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-base">{project.name}</CardTitle>
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="truncate text-base group-hover:text-primary">
+                      {project.name}
+                    </CardTitle>
+                    {project.description && (
+                      <CardDescription className="mt-1 line-clamp-2">
+                        {project.description}
+                      </CardDescription>
+                    )}
+                  </div>
                   <span onClick={(e) => e.stopPropagation()}>
                     <ConfirmDeleteDialog
                       name={project.name}
@@ -133,15 +171,15 @@ export function ProjectList() {
                     />
                   </span>
                 </div>
-                {project.description && (
-                  <CardDescription className="line-clamp-2">
-                    {project.description}
-                  </CardDescription>
-                )}
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span>{project.task_count} tasks</span>
+                <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary/50" />
+                    {project.task_count} task
+                    {project.task_count !== 1 ? "s" : ""}
+                  </span>
+                  <span className="text-border">/</span>
                   <span>
                     {new Date(project.created_at).toLocaleDateString()}
                   </span>
