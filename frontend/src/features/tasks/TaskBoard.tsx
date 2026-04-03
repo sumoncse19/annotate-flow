@@ -16,12 +16,7 @@ import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog"
 import { useQueryClient } from "@tanstack/react-query"
 import { FileUpload } from "./FileUpload"
 import { SubmissionList } from "./SubmissionList"
-import {
-  useTasks,
-  useCreateTask,
-  useDeleteTask,
-  useUpdateTask,
-} from "./hooks"
+import { useTasks, useCreateTask, useDeleteTask, useUpdateTask } from "./hooks"
 import { STATUS_STYLES, TYPE_LABELS } from "./types"
 import type { Project } from "@/features/projects/types"
 
@@ -53,7 +48,7 @@ export function TaskBoard({ project }: TaskBoardProps) {
           setTitle("")
           setDescription("")
         },
-      },
+      }
     )
   }
 
@@ -187,12 +182,35 @@ export function TaskBoard({ project }: TaskBoardProps) {
                         &#9656;
                       </span>
                       <h3 className="truncate font-medium">{task.title}</h3>
-                      <Badge
-                        variant="secondary"
-                        className="font-mono text-[10px] uppercase tracking-wider"
-                      >
-                        {TYPE_LABELS[task.task_type] || task.task_type}
-                      </Badge>
+                      {task.submission_count === 0 ? (
+                        <span onClick={(e) => e.stopPropagation()}>
+                          <Select
+                            value={task.task_type}
+                            onValueChange={(task_type) =>
+                              updateMutation.mutate({
+                                taskId: task.id,
+                                task_type,
+                              })
+                            }
+                          >
+                            <SelectTrigger className="h-6 w-auto gap-1 border-dashed px-2 font-mono text-[10px] tracking-wider uppercase">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent position="popper" sideOffset={4}>
+                              <SelectItem value="image">Image</SelectItem>
+                              <SelectItem value="audio">Audio</SelectItem>
+                              <SelectItem value="text">Text</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </span>
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className="font-mono text-[10px] tracking-wider uppercase"
+                        >
+                          {TYPE_LABELS[task.task_type] || task.task_type}
+                        </Badge>
+                      )}
                     </div>
                     {task.description && (
                       <p className="mt-1 truncate pl-5 text-sm text-muted-foreground">
@@ -213,7 +231,7 @@ export function TaskBoard({ project }: TaskBoardProps) {
                     }
                   >
                     <SelectTrigger
-                      className={`w-[140px] shrink-0 border font-mono text-xs ${STATUS_STYLES[task.status]}`}
+                      className={`w-35 shrink-0 border font-mono text-xs ${STATUS_STYLES[task.status]}`}
                     >
                       <SelectValue />
                     </SelectTrigger>

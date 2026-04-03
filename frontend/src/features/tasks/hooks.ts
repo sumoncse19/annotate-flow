@@ -56,6 +56,7 @@ export function useUpdateTask(projectId: string) {
       taskId: string
       title?: string
       description?: string
+      task_type?: string
       status?: string
       priority?: number
     }) => api.patch(`/projects/${projectId}/tasks/${taskId}`, data),

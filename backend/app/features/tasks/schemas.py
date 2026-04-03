@@ -16,6 +16,7 @@ class TaskCreate(BaseModel):
 class TaskUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
+    task_type: TaskType | None = None
     status: TaskStatus | None = None
     priority: int | None = None
 

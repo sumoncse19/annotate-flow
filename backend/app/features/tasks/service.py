@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.features.projects.models import Project
 from app.features.submissions.models import Submission
 from app.features.tasks.models import Task, TaskStatus
@@ -68,19 +68,25 @@ async def update_task(
     if not task:
         raise NotFoundError("Task not found")
 
-    for field, value in body.model_dump(exclude_unset=True).items():
+    count_result = await db.execute(
+        select(func.count(Submission.id)).where(Submission.task_id == task.id)
+    )
+    submission_count = count_result.scalar() or 0
+
+    updates = body.model_dump(exclude_unset=True)
+    if "task_type" in updates and submission_count > 0:
+        raise ForbiddenError("Cannot change task type after files have been uploaded")
+
+    for field, value in updates.items():
         setattr(task, field, value)
     await db.commit()
     await db.refresh(task)
 
-    count_result = await db.execute(
-        select(func.count(Submission.id)).where(Submission.task_id == task.id)
-    )
     return TaskResponse(
         id=task.id, title=task.title, description=task.description,
         task_type=task.task_type, status=task.status, priority=task.priority,
         project_id=task.project_id, created_at=task.created_at,
-        submission_count=count_result.scalar() or 0,
+        submission_count=submission_count,
     )
 
 
