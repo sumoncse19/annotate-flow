@@ -62,7 +62,7 @@ def process_submission(self, submission_id: str):
             content_type = (submission.content_type or "").lower()
 
             if content_type.startswith("image/"):
-                result.update(_process_image(file_bytes, s3, submission))
+                result.update(_process_image(file_bytes))
             elif content_type.startswith("audio/"):
                 result.update(_process_audio(file_bytes))
             elif content_type.startswith("text/"):
@@ -83,33 +83,19 @@ def process_submission(self, submission_id: str):
             raise self.retry(exc=exc)
 
 
-def _process_image(file_bytes: bytes, s3, submission):
+def _process_image(file_bytes: bytes):
     try:
         from PIL import Image
 
         img = Image.open(io.BytesIO(file_bytes))
         width, height = img.size
-        result = {
+        return {
             "type": "image",
             "width": width,
             "height": height,
             "format": img.format,
             "mode": img.mode,
         }
-
-        img.thumbnail((200, 200))
-        thumb_buffer = io.BytesIO()
-        img.save(thumb_buffer, format="PNG")
-        thumb_buffer.seek(0)
-        thumb_key = submission.file_key.rsplit("/", 1)[0] + "/thumbnail.png"
-        s3.put_object(
-            Bucket=settings.MINIO_BUCKET,
-            Key=thumb_key,
-            Body=thumb_buffer.getvalue(),
-            ContentType="image/png",
-        )
-        result["thumbnail_key"] = thumb_key
-        return result
     except ImportError:
         return {"type": "image", "note": "Pillow not installed, metadata extraction skipped"}
 

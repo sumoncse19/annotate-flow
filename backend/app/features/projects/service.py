@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from sqlalchemy import func, select
@@ -7,7 +8,11 @@ from app.core.exceptions import ForbiddenError, NotFoundError
 from app.features.auth.models import User
 from app.features.projects.models import Project
 from app.features.projects.schemas import ProjectResponse
+from app.features.submissions.models import Submission
 from app.features.tasks.models import Task
+from app.shared.storage import delete_objects_by_prefix
+
+logger = logging.getLogger(__name__)
 
 
 async def create_project(db: AsyncSession, name: str, description: str | None, owner: User) -> ProjectResponse:
@@ -65,5 +70,28 @@ async def delete_project(db: AsyncSession, project_id: uuid.UUID, current_user: 
         raise NotFoundError("Project not found")
     if project.owner_id != current_user.id:
         raise ForbiddenError("Not the project owner")
+
+    # Collect all file keys before deleting DB records
+    file_keys_result = await db.execute(
+        select(Submission.file_key)
+        .join(Task, Task.id == Submission.task_id)
+        .where(Task.project_id == project_id)
+    )
+    file_keys = [row[0] for row in file_keys_result.all()]
+
+    # Delete project (cascades to tasks → submissions in DB)
     await db.delete(project)
     await db.commit()
+
+    # Clean up S3 files — find the common prefix from file keys
+    if file_keys:
+        # Keys look like: submissions/{project_slug}_{id[:8]}/image/file.png
+        # Extract the project folder prefix
+        prefixes = set()
+        for key in file_keys:
+            parts = key.split("/")
+            if len(parts) >= 3:
+                prefixes.add(f"{parts[0]}/{parts[1]}/")
+        for prefix in prefixes:
+            deleted = delete_objects_by_prefix(prefix)
+            logger.info("Deleted %d files from S3 prefix: %s", deleted, prefix)

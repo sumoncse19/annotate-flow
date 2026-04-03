@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from sqlalchemy import func, select
@@ -8,6 +9,9 @@ from app.features.projects.models import Project
 from app.features.submissions.models import Submission
 from app.features.tasks.models import Task, TaskStatus
 from app.features.tasks.schemas import TaskResponse, TaskUpdate
+from app.shared.storage import delete_objects_by_prefix
+
+logger = logging.getLogger(__name__)
 
 
 async def create_task(
@@ -97,5 +101,21 @@ async def delete_task(db: AsyncSession, project_id: uuid.UUID, task_id: uuid.UUI
     task = result.scalar_one_or_none()
     if not task:
         raise NotFoundError("Task not found")
+
+    # Collect file keys before delete
+    file_keys_result = await db.execute(
+        select(Submission.file_key).where(Submission.task_id == task_id)
+    )
+    file_keys = [row[0] for row in file_keys_result.all()]
+
     await db.delete(task)
     await db.commit()
+
+    # Clean up S3 files
+    for key in file_keys:
+        try:
+            from app.shared.storage import s3_client
+            from app.core.config import settings
+            s3_client.delete_object(Bucket=settings.MINIO_BUCKET, Key=key)
+        except Exception:
+            logger.warning("Failed to delete S3 object: %s", key)

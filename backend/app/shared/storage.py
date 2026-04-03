@@ -32,6 +32,20 @@ def generate_presigned_upload_url(key: str, content_type: str, expires_in: int =
     )
 
 
+def delete_objects_by_prefix(prefix: str) -> int:
+    """Delete all objects under a prefix (folder) in the bucket. Returns count deleted."""
+    deleted = 0
+    paginator = s3_client.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=settings.MINIO_BUCKET, Prefix=prefix):
+        objects = page.get("Contents", [])
+        if not objects:
+            continue
+        delete_req = {"Objects": [{"Key": obj["Key"]} for obj in objects]}
+        s3_client.delete_objects(Bucket=settings.MINIO_BUCKET, Delete=delete_req)
+        deleted += len(objects)
+    return deleted
+
+
 def generate_presigned_download_url(key: str, expires_in: int = 3600) -> str:
     return s3_client.generate_presigned_url(
         "get_object",
