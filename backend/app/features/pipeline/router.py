@@ -19,3 +19,8 @@ async def recent_jobs(
     limit: int = Query(20, ge=1, le=100),
 ):
     return await service.get_recent_jobs(db, limit)
+
+
+@router.get("/analytics")
+async def analytics(current_user: CurrentUser, db: SessionDep):
+    return await service.get_analytics(db)

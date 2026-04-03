@@ -2,10 +2,11 @@ import type { ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { useTheme } from "@/components/theme-provider"
 import api from "@/shared/api"
 import type { User } from "@/features/auth/types"
 
-type Tab = "projects" | "pipeline"
+type Tab = "projects" | "pipeline" | "analytics"
 
 interface DashboardLayoutProps {
   activeTab: Tab
@@ -16,7 +17,8 @@ interface DashboardLayoutProps {
 
 const TABS: { key: Tab; label: string; mono?: string }[] = [
   { key: "projects", label: "Projects", mono: "01" },
-  { key: "pipeline", label: "Pipeline Monitor", mono: "02" },
+  { key: "pipeline", label: "Pipeline", mono: "02" },
+  { key: "analytics", label: "Analytics", mono: "03" },
 ]
 
 export function DashboardLayout({
@@ -29,6 +31,7 @@ export function DashboardLayout({
     queryKey: ["me"],
     queryFn: () => api.get("/auth/me").then((r) => r.data),
   })
+  const { theme, setTheme } = useTheme()
 
   return (
     <div className="bg-dot-grid min-h-svh">
@@ -100,6 +103,43 @@ export function DashboardLayout({
               </div>
             )}
             <div className="h-4 w-px bg-border" />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="text-muted-foreground hover:text-foreground"
+              title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            >
+              {theme === "dark" ? (
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="12" cy="12" r="5" />
+                  <line x1="12" y1="1" x2="12" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="23" />
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                  <line x1="1" y1="12" x2="3" y2="12" />
+                  <line x1="21" y1="12" x2="23" y2="12" />
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+              ) : (
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                </svg>
+              )}
+            </Button>
             <Button
               variant="ghost"
               size="sm"

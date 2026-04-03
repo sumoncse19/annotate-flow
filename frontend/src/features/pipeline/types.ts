@@ -16,6 +16,31 @@ export interface RecentJob {
   created_at: string
 }
 
+export interface Analytics {
+  overview: {
+    projects: number
+    tasks: number
+    submissions: number
+    completion_rate: number
+  }
+  tasks_by_status: Record<string, number>
+  tasks_by_type: Record<string, number>
+  submissions_by_status: Record<string, number>
+  top_contributors: {
+    name: string
+    email: string
+    total_submissions: number
+    completed_submissions: number
+  }[]
+  projects: {
+    name: string
+    task_count: number
+    submission_count: number
+    completed_tasks: number
+    completion_rate: number
+  }[]
+}
+
 export const STATUS_CONFIG: Record<
   string,
   { label: string; dotClass: string; textClass: string }

@@ -59,6 +59,17 @@ dev-frontend:
 
 test:
 	cd backend && venv/bin/python -m pytest tests/ -v
+	cd frontend && pnpm test
+	@echo "Re-seeding after tests..."
+	@cd backend && venv/bin/python -m scripts.seed 2>/dev/null || true
+
+# === Seed Data ===
+
+seed:
+	cd backend && venv/bin/python -m scripts.seed
+
+seed-reset:
+	cd backend && venv/bin/python -m scripts.seed --reset
 
 # === Database Migrations ===
 

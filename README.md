@@ -118,9 +118,14 @@ make db
 # Run database migration
 make migrate
 
+# Seed demo data (6 users, 3 projects, 10 tasks, 14 submissions)
+make seed
+
 # Start all dev servers (API + Celery worker + Frontend)
 make dev
 ```
+
+Demo credentials: `admin@annotateflow.dev` / `admin123`
 
 Open http://localhost:5173 in your browser.
 
@@ -138,7 +143,7 @@ This starts all 6 services: PostgreSQL, Redis, MinIO, FastAPI API, Celery Worker
 make test
 ```
 
-20 tests covering auth, projects, tasks, pipeline, and health endpoints.
+31 tests: 20 backend (Pytest) + 11 frontend (Vitest).
 
 ## API Endpoints
 
@@ -161,6 +166,7 @@ make test
 | GET | `/api/tasks/:id/submissions/:id/download-url` | Get presigned download URL |
 | GET | `/api/pipeline/status` | Processing status counts |
 | GET | `/api/pipeline/recent` | Recent processing jobs |
+| GET | `/api/pipeline/analytics` | Platform analytics & contributor stats |
 | GET | `/api/health` | Health check |
 
 ## Processing Pipeline
@@ -200,7 +206,9 @@ The Celery worker processes files based on content type:
 |---|---|
 | `make install` | Install backend + frontend dependencies |
 | `make dev` | Start infra in Docker + API + Worker + Frontend |
-| `make test` | Run Pytest test suite |
+| `make test` | Run backend + frontend test suites |
+| `make seed` | Populate database with demo data |
+| `make seed-reset` | Clear DB and re-seed |
 | `make up-build` | Full Docker Compose build + start |
 | `make down` | Stop all containers |
 | `make migrate` | Run Alembic migrations |
