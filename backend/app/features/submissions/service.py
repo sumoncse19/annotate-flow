@@ -5,7 +5,13 @@ from pathlib import PurePosixPath
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ForbiddenError, NotFoundError
+
+ALLOWED_CONTENT_TYPES: dict[str, list[str]] = {
+    "image": ["image/"],
+    "audio": ["audio/"],
+    "text": ["text/", "application/json", "application/xml"],
+}
 from app.features.auth.models import User
 from app.features.projects.models import Project
 from app.features.submissions.models import ProcessingStatus, Submission
@@ -61,6 +67,14 @@ async def create_submission(
     if not row:
         raise NotFoundError("Task not found")
     task, project = row
+
+    # Validate content type matches task type
+    ct = (content_type or "").lower()
+    allowed = ALLOWED_CONTENT_TYPES.get(task.task_type.value, [])
+    if ct and not any(ct.startswith(prefix) for prefix in allowed):
+        raise ForbiddenError(
+            f"File type '{content_type}' not allowed for {task.task_type.value} tasks"
+        )
 
     # Build path: submissions/{project_slug}_{unique_id}/{task_type}/{file_name}
     project_slug = _slugify_project_name(project.name)
