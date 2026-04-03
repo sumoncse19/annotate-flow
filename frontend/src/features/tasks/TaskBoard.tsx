@@ -24,7 +24,7 @@ interface TaskBoardProps {
 export function TaskBoard({ project }: TaskBoardProps) {
   const queryClient = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
-  const [uploadTaskId, setUploadTaskId] = useState<string | null>(null)
+  const [uploadTask, setUploadTask] = useState<{ id: string; type: string } | null>(null)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [taskType, setTaskType] = useState("image")
@@ -114,15 +114,16 @@ export function TaskBoard({ project }: TaskBoardProps) {
         </Card>
       )}
 
-      {uploadTaskId && (
+      {uploadTask && (
         <FileUpload
-          taskId={uploadTaskId}
-          onClose={() => setUploadTaskId(null)}
+          taskId={uploadTask.id}
+          taskType={uploadTask.type}
+          onClose={() => setUploadTask(null)}
           onUploaded={() => {
             queryClient.invalidateQueries({
               queryKey: ["tasks", project.id],
             })
-            setUploadTaskId(null)
+            setUploadTask(null)
           }}
         />
       )}
@@ -165,7 +166,7 @@ export function TaskBoard({ project }: TaskBoardProps) {
                   variant="outline"
                   size="sm"
                   className="ml-4 shrink-0"
-                  onClick={() => setUploadTaskId(task.id)}
+                  onClick={() => setUploadTask({ id: task.id, type: task.task_type })}
                 >
                   Upload File
                 </Button>

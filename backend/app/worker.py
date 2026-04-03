@@ -37,6 +37,7 @@ def _get_s3_client():
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=10)
 def process_submission(self, submission_id: str):
+    import app.shared.models  # noqa: F401 — register all ORM models
     from app.features.submissions.models import ProcessingStatus, Submission
 
     with SyncSession() as db:

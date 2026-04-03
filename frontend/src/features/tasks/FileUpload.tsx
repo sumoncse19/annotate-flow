@@ -3,13 +3,20 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import api from "@/shared/api"
 
+const ACCEPT_MAP: Record<string, string> = {
+  image: "image/*",
+  audio: "audio/*",
+  text: ".txt,.csv,.json,.md,.xml,.log",
+}
+
 interface FileUploadProps {
   taskId: string
+  taskType: string
   onClose: () => void
   onUploaded: () => void
 }
 
-export function FileUpload({ taskId, onClose, onUploaded }: FileUploadProps) {
+export function FileUpload({ taskId, taskType, onClose, onUploaded }: FileUploadProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [status, setStatus] = useState("")
@@ -69,6 +76,7 @@ export function FileUpload({ taskId, onClose, onUploaded }: FileUploadProps) {
         <input
           ref={fileRef}
           type="file"
+          accept={ACCEPT_MAP[taskType]}
           className="text-muted-foreground file:bg-secondary file:text-secondary-foreground w-full text-sm file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:px-4 file:py-2 file:text-sm file:font-medium"
         />
         <Button onClick={handleUpload} disabled={uploading} size="sm">
