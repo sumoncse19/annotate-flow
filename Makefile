@@ -55,6 +55,11 @@ dev-worker:
 dev-frontend:
 	cd frontend && pnpm dev
 
+# === Tests ===
+
+test:
+	cd backend && venv/bin/python -m pytest tests/ -v
+
 # === Database Migrations ===
 
 migrate:
