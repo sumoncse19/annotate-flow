@@ -63,7 +63,14 @@ A scalable AI data annotation and processing platform built with **FastAPI**, **
 - **Pipeline Monitor** with real-time status polling and processing breakdown
 - **File Preview Modal** for images, audio playback, and text content
 - **AI-Powered Analysis** via Groq (Llama 3.1) — sentiment badges, quality scores, tags, recommendations
+- **Search & Filter** on projects (by name) and tasks (by title, status, type) with ILIKE escape
+- **Pagination** with total counts on all list endpoints
+- **Analytics Dashboard** with contributor leaderboard, task/type breakdowns, project completion rates
 - **Custom Exception Handling** with structured error codes
+- **Rate Limiting** on auth (5/min register, 10/min login) and AI endpoints (10/min) via slowapi
+- **Structured Logging** with request ID middleware and per-request duration tracking
+- **Health Check** with dependency status (Postgres, Redis, MinIO connectivity)
+- **Dark/Light Mode** toggle with theme persistence
 
 ## Project Structure
 
@@ -203,6 +210,10 @@ The Celery worker processes files based on content type:
 - **Annotated dependency aliases** (`SessionDep`, `CurrentUser`) for clean function signatures
 - **Custom exception hierarchy** (`NotFoundError`, `ForbiddenError`, etc.) with centralized handlers
 - **Content-type validation** at both frontend and backend — prevents wrong file types per task
+- **LIKE pattern injection prevention** — escapes `%`, `_`, `\` in search inputs before ILIKE queries
+- **Rate limiting** with proper 429 responses via slowapi middleware
+- **Input validation** — `max_length=200` on search params, Pydantic validation on all request bodies
+- **Health check info hiding** — dependency errors logged server-side, only status returned to client
 
 ## Services
 
@@ -224,6 +235,7 @@ The Celery worker processes files based on content type:
 | `make test` | Run backend + frontend test suites |
 | `make seed` | Populate database with demo data |
 | `make seed-reset` | Clear DB and re-seed |
+| `make seed-scale` | Seed + 1200 submissions for EXPLAIN testing |
 | `make up-build` | Full Docker Compose build + start |
 | `make down` | Stop all containers |
 | `make migrate` | Run Alembic migrations |
