@@ -35,6 +35,12 @@ A scalable AI data annotation and processing platform built with **FastAPI**, **
                   └──────────────┘
 ```
 
+## Database ERD
+
+![ERD](ERD.png)
+
+[View on dbdiagram.io](https://dbdiagram.io/d/Annotate-Flow-69d18a320f7c9ef2c07d76f2)
+
 ## Tech Stack
 
 | Layer | Technology |
