@@ -19,8 +19,14 @@ export function ProjectList() {
   const [showCreate, setShowCreate] = useState(false)
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
+  const [search, setSearch] = useState("")
+  const [page, setPage] = useState(0)
+  const limit = 12
 
-  const { data: projects = [], isLoading } = useProjects()
+  const { data, isLoading } = useProjects(search, page, limit)
+  const projects = data?.items ?? []
+  const total = data?.total ?? 0
+  const totalPages = Math.ceil(total / limit)
   const createMutation = useCreateProject()
   const deleteMutation = useDeleteProject()
 
@@ -64,10 +70,23 @@ export function ProjectList() {
             Projects
           </h2>
           <p className="mt-1 font-mono text-sm text-muted-foreground">
-            {projects.length} project{projects.length !== 1 ? "s" : ""} total
+            {total} project{total !== 1 ? "s" : ""} total
           </p>
         </div>
         <Button onClick={() => setShowCreate(!showCreate)}>New Project</Button>
+      </div>
+
+      {/* Search */}
+      <div className="mb-6">
+        <Input
+          placeholder="Search projects..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setPage(0)
+          }}
+          className="max-w-sm"
+        />
       </div>
 
       {/* Create form */}
@@ -139,55 +158,86 @@ export function ProjectList() {
               />
             </svg>
           </div>
-          <p className="text-lg font-medium text-foreground">No projects yet</p>
+          <p className="text-lg font-medium text-foreground">
+            {search ? "No projects match your search" : "No projects yet"}
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Create your first project to begin annotating data
+            {search
+              ? "Try a different search term"
+              : "Create your first project to begin annotating data"}
           </p>
         </div>
       ) : (
-        <div className="stagger-children grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <Card
-              key={project.id}
-              className="group cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5"
-              onClick={() => setSelectedProject(project)}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0 flex-1">
-                    <CardTitle className="truncate text-base group-hover:text-primary">
-                      {project.name}
-                    </CardTitle>
-                    {project.description && (
-                      <CardDescription className="mt-1 line-clamp-2">
-                        {project.description}
-                      </CardDescription>
-                    )}
+        <>
+          <div className="stagger-children grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {projects.map((project) => (
+              <Card
+                key={project.id}
+                className="group cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5"
+                onClick={() => setSelectedProject(project)}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="truncate text-base group-hover:text-primary">
+                        {project.name}
+                      </CardTitle>
+                      {project.description && (
+                        <CardDescription className="mt-1 line-clamp-2">
+                          {project.description}
+                        </CardDescription>
+                      )}
+                    </div>
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <ConfirmDeleteDialog
+                        name={project.name}
+                        onConfirm={() => deleteMutation.mutate(project.id)}
+                      />
+                    </span>
                   </div>
-                  <span onClick={(e) => e.stopPropagation()}>
-                    <ConfirmDeleteDialog
-                      name={project.name}
-                      onConfirm={() => deleteMutation.mutate(project.id)}
-                    />
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary/50" />
-                    {project.task_count} task
-                    {project.task_count !== 1 ? "s" : ""}
-                  </span>
-                  <span className="text-border">/</span>
-                  <span>
-                    {new Date(project.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary/50" />
+                      {project.task_count} task
+                      {project.task_count !== 1 ? "s" : ""}
+                    </span>
+                    <span className="text-border">/</span>
+                    <span>
+                      {new Date(project.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 0}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Previous
+              </Button>
+              <span className="font-mono text-xs text-muted-foreground">
+                Page {page + 1} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

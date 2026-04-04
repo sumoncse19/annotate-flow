@@ -2,10 +2,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import api from "@/shared/api"
 import type { Project } from "./types"
 
-export function useProjects() {
-  return useQuery<Project[]>({
-    queryKey: ["projects"],
-    queryFn: () => api.get("/projects/").then((r) => r.data),
+interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  skip: number
+  limit: number
+}
+
+export function useProjects(search: string, page: number, limit = 12) {
+  const skip = page * limit
+  return useQuery<PaginatedResponse<Project>>({
+    queryKey: ["projects", search, page, limit],
+    queryFn: () =>
+      api
+        .get("/projects/", {
+          params: { search: search || undefined, skip, limit },
+        })
+        .then((r) => r.data),
   })
 }
 

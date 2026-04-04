@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.features.projects.models import Project
 from app.features.submissions.models import Submission
-from app.features.tasks.models import Task, TaskStatus
+from app.features.tasks.models import Task, TaskStatus, TaskType
 from app.features.tasks.schemas import TaskResponse, TaskUpdate
 from app.shared.storage import delete_objects_by_prefix
 
@@ -38,21 +38,33 @@ async def create_task(
 
 async def list_tasks(
     db: AsyncSession, project_id: uuid.UUID,
-    status_filter: TaskStatus | None, skip: int, limit: int,
-) -> list[TaskResponse]:
+    status_filter: TaskStatus | None, type_filter: TaskType | None = None,
+    search: str | None = None, skip: int = 0, limit: int = 20,
+) -> dict:
+    base_filters = [Task.project_id == project_id]
+    if status_filter:
+        base_filters.append(Task.status == status_filter)
+    if type_filter:
+        base_filters.append(Task.task_type == type_filter)
+    if search:
+        base_filters.append(Task.title.ilike(f"%{search}%"))
+
+    # Total count
+    count_q = select(func.count(Task.id)).where(*base_filters)
+    total = (await db.execute(count_q)).scalar() or 0
+
+    # Data query
     query = (
         select(Task, func.count(Submission.id).label("submission_count"))
         .outerjoin(Submission, Submission.task_id == Task.id)
-        .where(Task.project_id == project_id)
+        .where(*base_filters)
         .group_by(Task.id)
         .order_by(Task.priority.desc(), Task.created_at.desc())
         .offset(skip)
         .limit(limit)
     )
-    if status_filter:
-        query = query.where(Task.status == status_filter)
     result = await db.execute(query)
-    return [
+    items = [
         TaskResponse(
             id=t.id, title=t.title, description=t.description,
             task_type=t.task_type, status=t.status, priority=t.priority,
@@ -60,6 +72,7 @@ async def list_tasks(
         )
         for t, c in result.all()
     ]
+    return {"items": items, "total": total, "skip": skip, "limit": limit}
 
 
 async def update_task(

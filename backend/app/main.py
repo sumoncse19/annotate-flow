@@ -4,7 +4,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.config import settings
 from app.core.exceptions import AppError, app_error_handler, general_error_handler
+from app.core.middleware import RequestLoggingMiddleware
+from app.core.rate_limit import limiter
 from app.features.auth.router import router as auth_router
 from app.features.pipeline.router import router as pipeline_router
 from app.features.projects.router import router as projects_router
@@ -33,6 +36,7 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,6 +45,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(RequestLoggingMiddleware)
 
 app.add_exception_handler(AppError, app_error_handler)
 app.add_exception_handler(Exception, general_error_handler)
@@ -54,4 +60,40 @@ app.include_router(pipeline_router)
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "service": "annotateflow"}
+    from sqlalchemy import text as sa_text
+    from app.core.database import async_session
+    from app.shared.storage import s3_client
+    import redis.asyncio as aioredis
+
+    checks: dict = {}
+
+    # Postgres
+    try:
+        async with async_session() as db:
+            await db.execute(sa_text("SELECT 1"))
+        checks["postgres"] = "ok"
+    except Exception as e:
+        checks["postgres"] = f"error: {e}"
+
+    # Redis
+    try:
+        r = aioredis.from_url(settings.REDIS_URL)
+        await r.ping()
+        await r.aclose()
+        checks["redis"] = "ok"
+    except Exception as e:
+        checks["redis"] = f"error: {e}"
+
+    # MinIO
+    try:
+        s3_client.head_bucket(Bucket=settings.MINIO_BUCKET)
+        checks["minio"] = "ok"
+    except Exception as e:
+        checks["minio"] = f"error: {e}"
+
+    healthy = all(v == "ok" for v in checks.values())
+    return {
+        "status": "healthy" if healthy else "degraded",
+        "service": "annotateflow",
+        "dependencies": checks,
+    }

@@ -26,7 +26,16 @@ async def create_project(db: AsyncSession, name: str, description: str | None, o
     )
 
 
-async def list_projects(db: AsyncSession, skip: int, limit: int) -> list[ProjectResponse]:
+async def list_projects(db: AsyncSession, skip: int, limit: int, search: str | None = None) -> dict:
+    base = select(Project)
+    if search:
+        base = base.where(Project.name.ilike(f"%{search}%"))
+
+    # Total count
+    count_q = select(func.count()).select_from(base.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    # Data query
     query = (
         select(Project, func.count(Task.id).label("task_count"))
         .outerjoin(Task, Task.project_id == Project.id)
@@ -35,14 +44,18 @@ async def list_projects(db: AsyncSession, skip: int, limit: int) -> list[Project
         .offset(skip)
         .limit(limit)
     )
+    if search:
+        query = query.where(Project.name.ilike(f"%{search}%"))
+
     result = await db.execute(query)
-    return [
+    items = [
         ProjectResponse(
             id=p.id, name=p.name, description=p.description,
             owner_id=p.owner_id, created_at=p.created_at, task_count=tc,
         )
         for p, tc in result.all()
     ]
+    return {"items": items, "total": total, "skip": skip, "limit": limit}
 
 
 async def get_project(db: AsyncSession, project_id: uuid.UUID) -> ProjectResponse:

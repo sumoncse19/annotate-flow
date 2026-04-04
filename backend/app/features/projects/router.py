@@ -15,14 +15,15 @@ async def create_project(body: ProjectCreate, current_user: CurrentUser, db: Ses
     return await service.create_project(db, body.name, body.description, current_user)
 
 
-@router.get("/", response_model=list[ProjectResponse])
+@router.get("/")
 async def list_projects(
     db: SessionDep,
     current_user: CurrentUser,
+    search: str | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ):
-    return await service.list_projects(db, skip, limit)
+    return await service.list_projects(db, skip, limit, search)
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)

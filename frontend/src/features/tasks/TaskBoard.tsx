@@ -33,7 +33,24 @@ export function TaskBoard({ project }: TaskBoardProps) {
   const [description, setDescription] = useState("")
   const [taskType, setTaskType] = useState("image")
 
-  const { data: tasks = [], isLoading } = useTasks(project.id)
+  // Search & Filter
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState("")
+  const [typeFilter, setTypeFilter] = useState("")
+  const [page, setPage] = useState(0)
+  const limit = 20
+
+  const { data, isLoading } = useTasks(
+    project.id,
+    search,
+    statusFilter,
+    typeFilter,
+    page,
+    limit
+  )
+  const tasks = data?.items ?? []
+  const total = data?.total ?? 0
+  const totalPages = Math.ceil(total / limit)
   const createMutation = useCreateTask(project.id)
   const deleteMutation = useDeleteTask(project.id)
   const updateMutation = useUpdateTask(project.id)
@@ -66,10 +83,71 @@ export function TaskBoard({ project }: TaskBoardProps) {
             {project.name}
           </h2>
           <p className="mt-1 font-mono text-sm text-muted-foreground">
-            {tasks.length} task{tasks.length !== 1 ? "s" : ""} in project
+            {total} task{total !== 1 ? "s" : ""} in project
           </p>
         </div>
         <Button onClick={() => setShowCreate(!showCreate)}>New Task</Button>
+      </div>
+
+      {/* Search & Filter bar */}
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <Input
+          placeholder="Search tasks..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setPage(0)
+          }}
+          className="max-w-xs"
+        />
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => {
+            setStatusFilter(v === "all" ? "" : v)
+            setPage(0)
+          }}
+        >
+          <SelectTrigger className="w-35">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent position="popper">
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={typeFilter}
+          onValueChange={(v) => {
+            setTypeFilter(v === "all" ? "" : v)
+            setPage(0)
+          }}
+        >
+          <SelectTrigger className="w-30">
+            <SelectValue placeholder="All types" />
+          </SelectTrigger>
+          <SelectContent position="popper">
+            <SelectItem value="all">All types</SelectItem>
+            <SelectItem value="image">Image</SelectItem>
+            <SelectItem value="audio">Audio</SelectItem>
+            <SelectItem value="text">Text</SelectItem>
+          </SelectContent>
+        </Select>
+        {(search || statusFilter || typeFilter) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSearch("")
+              setStatusFilter("")
+              setTypeFilter("")
+              setPage(0)
+            }}
+          >
+            Clear
+          </Button>
+        )}
       </div>
 
       {/* Create form */}
@@ -154,150 +232,180 @@ export function TaskBoard({ project }: TaskBoardProps) {
               />
             </svg>
           </div>
-          <p className="text-lg font-medium">No tasks yet</p>
+          <p className="text-lg font-medium">
+            {search || statusFilter || typeFilter
+              ? "No tasks match your filters"
+              : "No tasks yet"}
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Create a task to start collecting data
+            {search || statusFilter || typeFilter
+              ? "Try different search or filter criteria"
+              : "Create a task to start collecting data"}
           </p>
         </div>
       ) : (
-        <div className="stagger-children space-y-3">
-          {tasks.map((task) => {
-            const isExpanded = expandedTaskId === task.id
-            const isUploading = uploadTaskId === task.id
-            return (
-              <Card
-                key={task.id}
-                className={`transition-colors ${isExpanded ? "border-primary/20" : ""}`}
-              >
-                {/* Task header row */}
-                <CardContent className="flex items-center gap-4 py-4">
-                  <div
-                    className="min-w-0 flex-1 cursor-pointer"
-                    onClick={() => toggleExpand(task.id)}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className={`text-xs text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                      >
-                        &#9656;
-                      </span>
-                      <h3 className="truncate font-medium">{task.title}</h3>
-                      {task.submission_count === 0 ? (
-                        <span onClick={(e) => e.stopPropagation()}>
-                          <Select
-                            value={task.task_type}
-                            onValueChange={(task_type) =>
-                              updateMutation.mutate({
-                                taskId: task.id,
-                                task_type,
-                              })
-                            }
-                          >
-                            <SelectTrigger className="h-6 w-auto gap-1 border-dashed px-2 font-mono text-[10px] tracking-wider uppercase">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent position="popper" sideOffset={4}>
-                              <SelectItem value="image">Image</SelectItem>
-                              <SelectItem value="audio">Audio</SelectItem>
-                              <SelectItem value="text">Text</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </span>
-                      ) : (
-                        <Badge
-                          variant="secondary"
-                          className="font-mono text-[10px] tracking-wider uppercase"
+        <>
+          <div className="stagger-children space-y-3">
+            {tasks.map((task) => {
+              const isExpanded = expandedTaskId === task.id
+              const isUploading = uploadTaskId === task.id
+              return (
+                <Card
+                  key={task.id}
+                  className={`transition-colors ${isExpanded ? "border-primary/20" : ""}`}
+                >
+                  {/* Task header row */}
+                  <CardContent className="flex items-center gap-4 py-4">
+                    <div
+                      className="min-w-0 flex-1 cursor-pointer"
+                      onClick={() => toggleExpand(task.id)}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={`text-xs text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`}
                         >
-                          {TYPE_LABELS[task.task_type] || task.task_type}
-                        </Badge>
+                          &#9656;
+                        </span>
+                        <h3 className="truncate font-medium">{task.title}</h3>
+                        {task.submission_count === 0 ? (
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <Select
+                              value={task.task_type}
+                              onValueChange={(task_type) =>
+                                updateMutation.mutate({
+                                  taskId: task.id,
+                                  task_type,
+                                })
+                              }
+                            >
+                              <SelectTrigger className="h-6 w-auto gap-1 border-dashed px-2 font-mono text-[10px] tracking-wider uppercase">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent position="popper" sideOffset={4}>
+                                <SelectItem value="image">Image</SelectItem>
+                                <SelectItem value="audio">Audio</SelectItem>
+                                <SelectItem value="text">Text</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </span>
+                        ) : (
+                          <Badge
+                            variant="secondary"
+                            className="font-mono text-[10px] tracking-wider uppercase"
+                          >
+                            {TYPE_LABELS[task.task_type] || task.task_type}
+                          </Badge>
+                        )}
+                      </div>
+                      {task.description && (
+                        <p className="mt-1 truncate pl-5 text-sm text-muted-foreground">
+                          {task.description}
+                        </p>
+                      )}
+                      <p className="mt-1.5 pl-5 font-mono text-xs text-muted-foreground/60">
+                        {task.submission_count} submission
+                        {task.submission_count !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+
+                    {/* Status select */}
+                    <Select
+                      value={task.status}
+                      onValueChange={(status) =>
+                        updateMutation.mutate({ taskId: task.id, status })
+                      }
+                    >
+                      <SelectTrigger
+                        className={`w-35 shrink-0 border font-mono text-xs ${STATUS_STYLES[task.status]}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent position="popper" sideOffset={4}>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {/* Upload */}
+                    <Button
+                      variant={isUploading ? "default" : "outline"}
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() =>
+                        setUploadTaskId(isUploading ? null : task.id)
+                      }
+                    >
+                      Upload
+                    </Button>
+
+                    {/* Delete */}
+                    <ConfirmDeleteDialog
+                      name={task.title}
+                      onConfirm={() => deleteMutation.mutate(task.id)}
+                    />
+                  </CardContent>
+
+                  {/* Expanded section: Upload + Submissions */}
+                  {(isUploading || isExpanded) && (
+                    <div className="animate-fade-up border-t border-border/50 px-6 pb-5">
+                      {isUploading && (
+                        <div className="pt-4">
+                          <FileUpload
+                            taskId={task.id}
+                            taskType={task.task_type}
+                            onClose={() => setUploadTaskId(null)}
+                            onUploaded={() => {
+                              queryClient.invalidateQueries({
+                                queryKey: ["tasks"],
+                              })
+                              queryClient.invalidateQueries({
+                                queryKey: ["submissions", task.id],
+                              })
+                              setUploadTaskId(null)
+                              setExpandedTaskId(task.id)
+                            }}
+                          />
+                        </div>
+                      )}
+                      {isExpanded && (
+                        <div className={isUploading ? "" : "pt-4"}>
+                          {isUploading && <Separator className="my-4" />}
+                          <SubmissionList taskId={task.id} />
+                        </div>
                       )}
                     </div>
-                    {task.description && (
-                      <p className="mt-1 truncate pl-5 text-sm text-muted-foreground">
-                        {task.description}
-                      </p>
-                    )}
-                    <p className="mt-1.5 pl-5 font-mono text-xs text-muted-foreground/60">
-                      {task.submission_count} submission
-                      {task.submission_count !== 1 ? "s" : ""}
-                    </p>
-                  </div>
+                  )}
+                </Card>
+              )
+            })}
+          </div>
 
-                  {/* Status select */}
-                  <Select
-                    value={task.status}
-                    onValueChange={(status) =>
-                      updateMutation.mutate({ taskId: task.id, status })
-                    }
-                  >
-                    <SelectTrigger
-                      className={`w-35 shrink-0 border font-mono text-xs ${STATUS_STYLES[task.status]}`}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent position="popper" sideOffset={4}>
-                      <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {/* Upload */}
-                  <Button
-                    variant={isUploading ? "default" : "outline"}
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() =>
-                      setUploadTaskId(isUploading ? null : task.id)
-                    }
-                  >
-                    Upload
-                  </Button>
-
-                  {/* Delete */}
-                  <ConfirmDeleteDialog
-                    name={task.title}
-                    onConfirm={() => deleteMutation.mutate(task.id)}
-                  />
-                </CardContent>
-
-                {/* Expanded section: Upload + Submissions */}
-                {(isUploading || isExpanded) && (
-                  <div className="animate-fade-up border-t border-border/50 px-6 pb-5">
-                    {/* Inline upload */}
-                    {isUploading && (
-                      <div className="pt-4">
-                        <FileUpload
-                          taskId={task.id}
-                          taskType={task.task_type}
-                          onClose={() => setUploadTaskId(null)}
-                          onUploaded={() => {
-                            queryClient.invalidateQueries({
-                              queryKey: ["tasks", project.id],
-                            })
-                            queryClient.invalidateQueries({
-                              queryKey: ["submissions", task.id],
-                            })
-                            setUploadTaskId(null)
-                            setExpandedTaskId(task.id)
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {/* Submissions list */}
-                    {isExpanded && (
-                      <div className={isUploading ? "" : "pt-4"}>
-                        {isUploading && <Separator className="my-4" />}
-                        <SubmissionList taskId={task.id} />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </Card>
-            )
-          })}
-        </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 0}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Previous
+              </Button>
+              <span className="font-mono text-xs text-muted-foreground">
+                Page {page + 1} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

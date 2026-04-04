@@ -1,8 +1,9 @@
 import uuid
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 
 from app.core.database import SessionDep
+from app.core.rate_limit import limiter
 from app.features.auth.dependencies import CurrentUser
 from app.features.submissions.models import ProcessingStatus
 from app.features.submissions.schemas import PresignedUploadResponse, SubmissionCreate, SubmissionResponse
@@ -48,5 +49,6 @@ async def get_download_url(task_id: uuid.UUID, submission_id: uuid.UUID, current
 
 
 @router.post("/{submission_id}/analyze")
-async def analyze_submission(task_id: uuid.UUID, submission_id: uuid.UUID, current_user: CurrentUser, db: SessionDep):
+@limiter.limit("10/minute")
+async def analyze_submission(request: Request, task_id: uuid.UUID, submission_id: uuid.UUID, current_user: CurrentUser, db: SessionDep):
     return await service.analyze_submission(db, task_id, submission_id)
