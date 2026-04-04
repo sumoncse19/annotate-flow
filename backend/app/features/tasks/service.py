@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 
 from sqlalchemy import func, select
@@ -12,6 +13,10 @@ from app.features.tasks.schemas import TaskResponse, TaskUpdate
 from app.shared.storage import delete_objects_by_prefix
 
 logger = logging.getLogger(__name__)
+
+
+def _escape_like(s: str) -> str:
+    return re.sub(r"([%_\\])", r"\\\1", s)
 
 
 async def create_task(
@@ -47,7 +52,7 @@ async def list_tasks(
     if type_filter:
         base_filters.append(Task.task_type == type_filter)
     if search:
-        base_filters.append(Task.title.ilike(f"%{search}%"))
+        base_filters.append(Task.title.ilike(f"%{_escape_like(search)}%"))
 
     # Total count
     count_q = select(func.count(Task.id)).where(*base_filters)

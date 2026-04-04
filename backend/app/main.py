@@ -8,6 +8,9 @@ from app.core.config import settings
 from app.core.exceptions import AppError, app_error_handler, general_error_handler
 from app.core.middleware import RequestLoggingMiddleware
 from app.core.rate_limit import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from app.features.auth.router import router as auth_router
 from app.features.pipeline.router import router as pipeline_router
 from app.features.projects.router import router as projects_router
@@ -47,7 +50,9 @@ app.add_middleware(
 )
 
 app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(SlowAPIMiddleware)
 
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_exception_handler(AppError, app_error_handler)
 app.add_exception_handler(Exception, general_error_handler)
 
@@ -73,7 +78,8 @@ async def health_check():
             await db.execute(sa_text("SELECT 1"))
         checks["postgres"] = "ok"
     except Exception as e:
-        checks["postgres"] = f"error: {e}"
+        logger.error("Health check postgres failed: %s", e)
+        checks["postgres"] = "error"
 
     # Redis
     try:
@@ -82,14 +88,16 @@ async def health_check():
         await r.aclose()
         checks["redis"] = "ok"
     except Exception as e:
-        checks["redis"] = f"error: {e}"
+        logger.error("Health check redis failed: %s", e)
+        checks["redis"] = "error"
 
     # MinIO
     try:
         s3_client.head_bucket(Bucket=settings.MINIO_BUCKET)
         checks["minio"] = "ok"
     except Exception as e:
-        checks["minio"] = f"error: {e}"
+        logger.error("Health check minio failed: %s", e)
+        checks["minio"] = "error"
 
     healthy = all(v == "ok" for v in checks.values())
     return {

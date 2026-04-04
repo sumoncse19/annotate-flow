@@ -1,13 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import api from "@/shared/api"
+import type { PaginatedResponse } from "@/shared/types"
 import type { Project } from "./types"
-
-interface PaginatedResponse<T> {
-  items: T[]
-  total: number
-  skip: number
-  limit: number
-}
 
 export function useProjects(search: string, page: number, limit = 12) {
   const skip = page * limit

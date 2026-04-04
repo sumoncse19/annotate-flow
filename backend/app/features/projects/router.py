@@ -19,7 +19,7 @@ async def create_project(body: ProjectCreate, current_user: CurrentUser, db: Ses
 async def list_projects(
     db: SessionDep,
     current_user: CurrentUser,
-    search: str | None = Query(None),
+    search: str | None = Query(None, max_length=200),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ):

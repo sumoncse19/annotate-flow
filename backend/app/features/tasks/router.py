@@ -23,7 +23,7 @@ async def list_tasks(
     project_id: uuid.UUID,
     db: SessionDep,
     current_user: CurrentUser,
-    search: str | None = Query(None),
+    search: str | None = Query(None, max_length=200),
     status_filter: TaskStatus | None = Query(None, alias="status"),
     type_filter: TaskType | None = Query(None, alias="type"),
     skip: int = Query(0, ge=0),

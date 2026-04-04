@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 
 from sqlalchemy import func, select
@@ -15,6 +16,10 @@ from app.shared.storage import delete_objects_by_prefix
 logger = logging.getLogger(__name__)
 
 
+def _escape_like(s: str) -> str:
+    return re.sub(r"([%_\\])", r"\\\1", s)
+
+
 async def create_project(db: AsyncSession, name: str, description: str | None, owner: User) -> ProjectResponse:
     project = Project(name=name, description=description, owner_id=owner.id)
     db.add(project)
@@ -29,7 +34,7 @@ async def create_project(db: AsyncSession, name: str, description: str | None, o
 async def list_projects(db: AsyncSession, skip: int, limit: int, search: str | None = None) -> dict:
     base = select(Project)
     if search:
-        base = base.where(Project.name.ilike(f"%{search}%"))
+        base = base.where(Project.name.ilike(f"%{_escape_like(search)}%"))
 
     # Total count
     count_q = select(func.count()).select_from(base.subquery())
@@ -45,7 +50,7 @@ async def list_projects(db: AsyncSession, skip: int, limit: int, search: str | N
         .limit(limit)
     )
     if search:
-        query = query.where(Project.name.ilike(f"%{search}%"))
+        query = query.where(Project.name.ilike(f"%{_escape_like(search)}%"))
 
     result = await db.execute(query)
     items = [
