@@ -71,6 +71,10 @@ seed:
 seed-reset:
 	cd backend && venv/bin/python -m scripts.seed --reset
 
+seed-scale:
+	cd backend && venv/bin/python -m scripts.seed --reset
+	cd backend && venv/bin/python -m scripts.seed_scale
+
 # === Database Migrations ===
 
 migrate:

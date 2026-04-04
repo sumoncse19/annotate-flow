@@ -21,7 +21,8 @@ async def test_list_projects(auth_client: tuple[AsyncClient, str]):
     await client.post("/api/projects/", json={"name": "P2"})
     resp = await client.get("/api/projects/")
     assert resp.status_code == 200
-    assert len(resp.json()) == 2
+    assert resp.json()["total"] == 2
+    assert len(resp.json()["items"]) == 2
 
 
 @pytest.mark.asyncio

@@ -30,7 +30,8 @@ async def test_list_tasks(auth_client: tuple[AsyncClient, str]):
     await client.post(f"/api/projects/{pid}/tasks/", json={"title": "T2", "task_type": "audio"})
     resp = await client.get(f"/api/projects/{pid}/tasks/")
     assert resp.status_code == 200
-    assert len(resp.json()) == 2
+    assert resp.json()["total"] == 2
+    assert len(resp.json()["items"]) == 2
 
 
 @pytest.mark.asyncio

@@ -35,4 +35,7 @@ async def test_pipeline_analytics(auth_client: tuple[AsyncClient, str]):
 async def test_health_check(client: AsyncClient):
     resp = await client.get("/api/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "healthy", "service": "annotateflow"}
+    data = resp.json()
+    assert data["service"] == "annotateflow"
+    assert data["status"] in ("healthy", "degraded")
+    assert "dependencies" in data
