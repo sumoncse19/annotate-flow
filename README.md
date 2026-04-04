@@ -45,7 +45,7 @@ A scalable AI data annotation and processing platform built with **FastAPI**, **
 | Queue | Celery + Redis (background workers, retry logic) |
 | Storage | MinIO (S3-compatible, presigned URLs, boto3) |
 | AI | Groq (Llama 3.1 8B) — sentiment analysis, quality scoring, tagging |
-| Infra | Docker Compose, Makefile |
+| Infra | Docker Compose, Makefile, GitHub Actions CI |
 | Testing | Pytest (24 backend) + Vitest (11 frontend) |
 
 ## Features
