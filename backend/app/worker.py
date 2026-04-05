@@ -34,7 +34,7 @@ def _get_s3_client():
 
     return boto3.client(
         "s3",
-        endpoint_url=f"http://{settings.MINIO_ENDPOINT}",
+        endpoint_url=f"http{'s' if settings.MINIO_USE_SSL else ''}://{settings.MINIO_ENDPOINT}",
         aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         config=Config(signature_version="s3v4"),
