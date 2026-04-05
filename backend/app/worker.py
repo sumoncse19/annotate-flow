@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
-sync_db_url = settings.DATABASE_URL.replace("+asyncpg", "+psycopg2")
+sync_db_url = settings.DATABASE_URL.replace("+asyncpg", "+psycopg2").replace("?ssl=require", "?sslmode=require")
 
 celery_app = Celery("annotateflow", broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 celery_app.conf.update(
