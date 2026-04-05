@@ -12,7 +12,7 @@ if config.config_file_name is not None:
 
 db_url = os.getenv("DATABASE_URL", "")
 if db_url:
-    sync_url = db_url.replace("+asyncpg", "+psycopg2")
+    sync_url = db_url.replace("+asyncpg", "+psycopg2").replace("?ssl=require", "?sslmode=require")
     config.set_main_option("sqlalchemy.url", sync_url)
 
 # Import all models so Alembic can detect them
