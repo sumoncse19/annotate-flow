@@ -10,6 +10,13 @@ from app.core.config import settings
 sync_db_url = settings.DATABASE_URL.replace("+asyncpg", "+psycopg2").replace("?ssl=require", "?sslmode=require")
 
 celery_app = Celery("annotateflow", broker=settings.REDIS_URL, backend=settings.REDIS_URL)
+
+# SSL config for Upstash (rediss://)
+_redis_ssl = settings.REDIS_URL.startswith("rediss://")
+if _redis_ssl:
+    celery_app.conf.broker_use_ssl = {"ssl_cert_reqs": 0}
+    celery_app.conf.redis_backend_use_ssl = {"ssl_cert_reqs": 0}
+
 celery_app.conf.update(
     task_serializer="json",
     result_serializer="json",
