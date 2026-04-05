@@ -2,6 +2,10 @@
 
 A scalable AI data annotation and processing platform built with **FastAPI**, **React 19**, **PostgreSQL**, **Celery**, and **MinIO (S3-compatible)**. Contributors upload files, Celery workers process them through an async pipeline, and the dashboard tracks everything in real time.
 
+**Live Demo:** [annotateflow-api.onrender.com](https://annotateflow-api.onrender.com) | **API Docs:** [Swagger UI](https://annotateflow-api.onrender.com/docs)
+
+> Note: Free tier server may take ~30s to wake up on first request.
+
 ## Architecture
 
 ```

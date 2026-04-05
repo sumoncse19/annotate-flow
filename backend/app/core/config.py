@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = "minioadmin123"
     MINIO_USE_SSL: bool = False
 
+    # CORS
+    ALLOWED_ORIGINS: str = ""
+
     # AI (Groq)
     GROQ_API_KEY: str = ""
 
